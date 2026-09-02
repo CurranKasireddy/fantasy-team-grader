@@ -5,12 +5,15 @@ import type { ExtractedPlayer } from "./types";
 
 const GROQ_MODEL = "qwen/qwen3.6-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// Groq's vision docs allow up to 5 images per request, but the free tier
-// caps this model at 8,000 tokens/minute and each image alone costs ~2,048
-// tokens — 5 images would blow past that before counting the prompt or
-// output. 2 per call leaves comfortable headroom.
-const MAX_IMAGES_PER_CALL = 2;
-const MAX_COMPLETION_TOKENS = 2048;
+// One image per call: this model spends a chunk of its output budget on
+// hidden chain-of-thought reasoning before the actual JSON (confirmed live —
+// completion_tokens_details.reasoning_tokens was a real chunk of
+// completion_tokens in testing), and a busy real roster screenshot needs a
+// lot more of that thinking than a simple one — enough to truncate the
+// player list before it finished on multi-image batches. One image per call
+// leaves the most budget for both.
+const MAX_IMAGES_PER_CALL = 1;
+const MAX_COMPLETION_TOKENS = 3000;
 const MAX_RETRIES = 3;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
