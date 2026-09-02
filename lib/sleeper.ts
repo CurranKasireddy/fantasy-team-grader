@@ -4,12 +4,18 @@
 import { promises as fs } from "fs";
 import os from "os";
 import path from "path";
-import type { ScoringFormat, SleeperPlayerRecord } from "./types";
+import type { ScoringFormat, SleeperPlayerRecord, WeeklyMatchup } from "./types";
 
 const PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl";
-// Note: the stats endpoint lives on a different subdomain (api.sleeper.com,
-// not .app) — undocumented, but verified live against the real API.
+const STATE_URL = "https://api.sleeper.app/v1/state/nfl";
+// Note: the stats and projections endpoints live on a different subdomain
+// (api.sleeper.com, not .app) — undocumented, but verified live against the
+// real API, including that per-week entries (unlike season totals) carry an
+// "opponent" field, and that a real (Rotowire-sourced) projections endpoint
+// exists at the same URL shape as stats.
 const STATS_URL = (season: string) => `https://api.sleeper.com/stats/nfl/${season}?season_type=regular`;
+const PROJECTIONS_URL = (season: string, week: number) =>
+  `https://api.sleeper.com/projections/nfl/${season}/${week}?season_type=regular`;
 
 // os.tmpdir() rather than a project-relative folder: serverless hosts like
 // Vercel have a read-only filesystem except /tmp (which os.tmpdir()
@@ -21,12 +27,17 @@ const CACHE_DIR = path.join(os.tmpdir(), "fantasy-team-grader-cache");
 const PLAYERS_CACHE_FILE = path.join(CACHE_DIR, "sleeper-players.json");
 const PLAYERS_TTL_MS = 24 * 60 * 60 * 1000; // 24h, per Sleeper's own guidance
 const STATS_TTL_MS = 6 * 60 * 60 * 1000; // 6h — in-season totals shift during the week
+const STATE_TTL_MS = 60 * 60 * 1000; // 1h — cheap call, but the week does change
+const PROJECTIONS_TTL_MS = 3 * 60 * 60 * 1000; // 3h — projections update through the week
 
 interface RawSleeperPlayer {
   player_id?: string;
   full_name?: string;
   first_name?: string;
   last_name?: string;
+  injury_status?: string | null;
+  injury_body_part?: string | null;
+  injury_notes?: string | null;
   position?: string | null;
   team?: string | null;
   fantasy_positions?: string[] | null;
@@ -36,6 +47,18 @@ interface RawStatEntry {
   player_id: string;
   player?: { position?: string | null; team?: string | null } | null;
   stats?: Record<string, number | undefined> | null;
+}
+
+interface RawProjectionEntry {
+  player_id: string;
+  opponent?: string | null;
+  stats?: Record<string, number | undefined> | null;
+}
+
+interface RawNFLState {
+  week?: number;
+  season?: string;
+  season_type?: string;
 }
 
 interface CacheEnvelope<T> {
@@ -90,6 +113,9 @@ export async function getAllPlayers(): Promise<SleeperPlayerRecord[]> {
       position: p.position || "UNKNOWN",
       team: p.team || null,
       fantasyPositions: p.fantasy_positions || (p.position ? [p.position] : []),
+      injuryStatus: p.injury_status || null,
+      injuryBodyPart: p.injury_body_part || null,
+      injuryNotes: p.injury_notes || null,
     }));
 
   playersMemoryCache = list;
@@ -162,6 +188,66 @@ export async function getBestAvailableSeasonStats(
   // Should be unreachable (the loop always resolves on its second iteration),
   // but keep TypeScript happy and fail loudly if Sleeper's shape ever changes.
   throw new Error("Could not find any usable season stats from Sleeper.");
+}
+
+// --- Current week + weekly matchups/projections ---------------------------
+
+const STATE_CACHE_FILE = path.join(CACHE_DIR, "sleeper-state.json");
+
+/** The NFL's own idea of "what week is it" — authoritative, not derived from the calendar. */
+export async function getCurrentNFLWeek(): Promise<{ season: string; week: number }> {
+  const cached = await readCache<RawNFLState>(STATE_CACHE_FILE, STATE_TTL_MS);
+  let state = cached;
+  if (!state) {
+    const res = await fetch(STATE_URL);
+    if (!res.ok) throw new Error(`Sleeper state API error ${res.status}`);
+    state = (await res.json()) as RawNFLState;
+    await writeCache(STATE_CACHE_FILE, state);
+  }
+  if (!state.season || typeof state.week !== "number") {
+    throw new Error("Sleeper state API returned an unexpected shape.");
+  }
+  return { season: state.season, week: state.week };
+}
+
+/**
+ * This week's opponent + projected points for every player with a projection
+ * (Rotowire-sourced via Sleeper). Returns an empty map rather than throwing
+ * if the projections endpoint has nothing yet for the current week (e.g.
+ * very early in the week before they're published) — matchup info is a
+ * nice-to-have, not something that should break grading.
+ */
+export async function getWeeklyMatchups(
+  scoring: ScoringFormat
+): Promise<{ season: string; week: number; matchupsByPlayerId: Map<string, WeeklyMatchup> }> {
+  const { season, week } = await getCurrentNFLWeek();
+  const field = scoringField[scoring];
+  const map = new Map<string, WeeklyMatchup>();
+
+  try {
+    const cacheFile = path.join(CACHE_DIR, `sleeper-projections-${season}-${week}.json`);
+    const cached = await readCache<RawProjectionEntry[]>(cacheFile, PROJECTIONS_TTL_MS);
+    let raw = cached;
+    if (!raw) {
+      const res = await fetch(PROJECTIONS_URL(season, week));
+      if (!res.ok) throw new Error(`Sleeper projections API error ${res.status}`);
+      raw = (await res.json()) as RawProjectionEntry[];
+      await writeCache(cacheFile, raw);
+    }
+    for (const entry of raw) {
+      const projectedPoints = entry.stats?.[field];
+      map.set(entry.player_id, {
+        week,
+        opponent: entry.opponent || null,
+        projectedPoints: typeof projectedPoints === "number" ? projectedPoints : null,
+      });
+    }
+  } catch {
+    // Matchup/projection data is a bonus feature, not core to grading —
+    // fall through and return whatever (possibly empty) map we have.
+  }
+
+  return { season, week, matchupsByPlayerId: map };
 }
 
 // --- Name matching ---------------------------------------------------------

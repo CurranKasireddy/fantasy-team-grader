@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import PlayerDetailModal from "@/components/PlayerDetailModal";
 import type { GradedPlayer, TeamReport } from "@/lib/types";
 
 interface Props {
@@ -79,10 +81,14 @@ function GradeRing({ grade, score }: { grade: string; score: number }) {
   );
 }
 
-function PlayerRow({ player }: { player: GradedPlayer }) {
+function PlayerRow({ player, onSelect }: { player: GradedPlayer; onSelect: () => void }) {
   const tone = player.grade ? gradeTone(player.grade) : null;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-4 py-2 first:border-t-0">
+    <button
+      type="button"
+      onClick={onSelect}
+      className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-4 py-2 text-left first:border-t-0 hover:bg-surface-muted"
+    >
       <div className="w-full min-w-0 sm:w-auto sm:flex-1">
         <div className="flex items-center gap-2 text-sm">
           <span className="min-w-0 truncate font-medium">
@@ -114,11 +120,13 @@ function PlayerRow({ player }: { player: GradedPlayer }) {
       <div className="w-8 shrink-0 text-right">
         {player.grade && <span className={`text-sm font-semibold ${TONE_TEXT[tone!]}`}>{player.grade}</span>}
       </div>
-    </div>
+    </button>
   );
 }
 
 export default function ReportStep({ report, onReset }: Props) {
+  const [selectedPlayer, setSelectedPlayer] = useState<GradedPlayer | null>(null);
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
@@ -166,7 +174,7 @@ export default function ReportStep({ report, onReset }: Props) {
               </div>
               <div>
                 {group.players.map((p) => (
-                  <PlayerRow key={p.clientId} player={p} />
+                  <PlayerRow key={p.clientId} player={p} onSelect={() => setSelectedPlayer(p)} />
                 ))}
               </div>
             </div>
@@ -194,6 +202,8 @@ export default function ReportStep({ report, onReset }: Props) {
       >
         Start over
       </button>
+
+      {selectedPlayer && <PlayerDetailModal player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
     </div>
   );
 }

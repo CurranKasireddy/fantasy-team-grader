@@ -37,6 +37,16 @@ export interface SleeperPlayerRecord {
   position: string;
   team: string | null;
   fantasyPositions: string[];
+  injuryStatus: string | null;
+  injuryBodyPart: string | null;
+  injuryNotes: string | null;
+}
+
+/** This week's matchup + projection for one player, when available. */
+export interface WeeklyMatchup {
+  week: number;
+  opponent: string | null;
+  projectedPoints: number | null;
 }
 
 export interface GradedPlayer extends ExtractedPlayer {
@@ -49,6 +59,10 @@ export interface GradedPlayer extends ExtractedPlayer {
   /** Percentile (0-100) vs. other rostered-relevant players at the same position. */
   positionPercentile: number | null;
   grade: string | null;
+  injuryStatus: string | null;
+  injuryBodyPart: string | null;
+  injuryNotes: string | null;
+  weeklyMatchup: WeeklyMatchup | null;
 }
 
 export interface PositionGroupReport {

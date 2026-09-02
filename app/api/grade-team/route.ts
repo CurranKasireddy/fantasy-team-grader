@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAllPlayers, getBestAvailableSeasonStats, matchPlayer } from "@/lib/sleeper";
+import { getAllPlayers, getBestAvailableSeasonStats, getWeeklyMatchups, matchPlayer } from "@/lib/sleeper";
 import { buildTeamReport, letterGrade, percentileRank } from "@/lib/grading";
 import type { ExtractedPlayer, GradedPlayer, LeagueSettings } from "@/lib/types";
 
@@ -40,7 +40,12 @@ export async function POST(request: Request) {
   try {
     const allPlayers = await getAllPlayers();
     const { season, statsByPlayerId } = await getBestAvailableSeasonStats(settings.scoring);
+    // Matchup/projection data is a bonus on top of the core grade — a
+    // failure here (e.g. Sleeper's projections not published yet) returns
+    // an empty map rather than failing the whole request.
+    const { matchupsByPlayerId } = await getWeeklyMatchups(settings.scoring);
 
+    const playerById = new Map(allPlayers.map((p) => [p.playerId, p]));
     // Build a per-position points-per-game distribution to grade against.
     const positionOf = new Map(allPlayers.map((p) => [p.playerId, p.position]));
     const distributions = new Map<string, number[]>();
@@ -62,6 +67,8 @@ export async function POST(request: Request) {
       const distribution = distributions.get(extracted.position.toUpperCase());
       const positionPercentile =
         pointsPerGame !== null && distribution ? percentileRank(distribution, pointsPerGame) : null;
+      const sleeperRecord = match.sleeperId ? playerById.get(match.sleeperId) : undefined;
+      const matchup = match.sleeperId ? (matchupsByPlayerId.get(match.sleeperId) ?? null) : null;
 
       return {
         ...extracted,
@@ -73,6 +80,10 @@ export async function POST(request: Request) {
         pointsPerGame,
         positionPercentile,
         grade: positionPercentile !== null ? letterGrade(positionPercentile) : null,
+        injuryStatus: sleeperRecord?.injuryStatus ?? null,
+        injuryBodyPart: sleeperRecord?.injuryBodyPart ?? null,
+        injuryNotes: sleeperRecord?.injuryNotes ?? null,
+        weeklyMatchup: matchup,
       };
     });
 
