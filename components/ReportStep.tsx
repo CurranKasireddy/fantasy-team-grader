@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LineupChat from "@/components/LineupChat";
 import PlayerDetailModal from "@/components/PlayerDetailModal";
 import type { GradedPlayer, TeamReport } from "@/lib/types";
 
@@ -126,6 +127,7 @@ function PlayerRow({ player, onSelect }: { player: GradedPlayer; onSelect: () =>
 
 export default function ReportStep({ report, onReset }: Props) {
   const [selectedPlayer, setSelectedPlayer] = useState<GradedPlayer | null>(null);
+  const roster = report.positionGroups.flatMap((g) => g.players);
 
   return (
     <div className="flex flex-col gap-8">
@@ -194,6 +196,8 @@ export default function ReportStep({ report, onReset }: Props) {
           </div>
         </div>
       )}
+
+      {roster.some((p) => p.sleeperId) && <LineupChat roster={roster} />}
 
       <button
         type="button"

@@ -81,3 +81,8 @@ export interface TeamReport {
   weaknesses: string[];
   unmatchedPlayers: GradedPlayer[];
 }
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}

@@ -1,6 +1,7 @@
 // Vision extraction: turn roster screenshots into a structured player list
 // using Groq's free-tier API (qwen/qwen3.6-27b, vision-capable). See README
 // for how to get a free Groq API key.
+import { parseDelaySeconds, sleep } from "./groq-shared";
 import type { ExtractedPlayer } from "./types";
 
 const GROQ_MODEL = "qwen/qwen3.6-27b";
@@ -23,21 +24,6 @@ const MAX_IMAGES_PER_CALL = 1;
 // comfortable headroom under the free tier's 8,000 TPM cap.
 const MAX_COMPLETION_TOKENS = 2500;
 const MAX_RETRIES = 3;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Parses either a plain-seconds string ("22.3") or a Go-style duration
- * string ("2m59.56s", "7.66s") as used by Groq's rate-limit headers. */
-function parseDelaySeconds(value: string | null): number | null {
-  if (!value) return null;
-  const plain = Number(value);
-  if (!Number.isNaN(plain)) return plain;
-  const match = value.match(/^(?:(\d+)m)?(?:([\d.]+)s)?$/);
-  if (match && (match[1] || match[2])) {
-    return (match[1] ? Number(match[1]) * 60 : 0) + (match[2] ? Number(match[2]) : 0);
-  }
-  return null;
-}
 
 const SYSTEM_PROMPT = `You read screenshots of fantasy football team rosters (from apps like Sleeper, ESPN Fantasy, Yahoo Fantasy, or similar) and extract every player visible into structured JSON.
 
