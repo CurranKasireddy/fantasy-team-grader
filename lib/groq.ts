@@ -5,15 +5,23 @@ import type { ExtractedPlayer } from "./types";
 
 const GROQ_MODEL = "qwen/qwen3.6-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// One image per call: this model spends a chunk of its output budget on
-// hidden chain-of-thought reasoning before the actual JSON (confirmed live —
-// completion_tokens_details.reasoning_tokens was a real chunk of
-// completion_tokens in testing), and a busy real roster screenshot needs a
-// lot more of that thinking than a simple one — enough to truncate the
-// player list before it finished on multi-image batches. One image per call
-// leaves the most budget for both.
+// This model spends part of its output budget on hidden chain-of-thought
+// reasoning before the actual JSON — confirmed live twice: once via
+// completion_tokens_details.reasoning_tokens showing up as a real chunk of
+// completion_tokens, and again by deliberately starving max_completion_tokens
+// and watching the response get cut off mid-<think> with zero real output
+// (which is exactly what produces a json_validate_failed error with an
+// EMPTY failed_generation — nothing was generated yet to fail on). A busy
+// real roster screenshot needs enough of that thinking to occasionally blow
+// straight through any budget we set, and every retry hits the same wall on
+// the same image. reasoning_effort: "none" removes the cause instead of
+// padding the budget and hoping: confirmed live it skips the <think> preamble
+// entirely and answers directly, using a fraction of the tokens.
 const MAX_IMAGES_PER_CALL = 1;
-const MAX_COMPLETION_TOKENS = 3000;
+// Generous even though a typical roster needs a fraction of this — without
+// reasoning eating the budget, 1 image (~2048 tok) + this still leaves
+// comfortable headroom under the free tier's 8,000 TPM cap.
+const MAX_COMPLETION_TOKENS = 2500;
 const MAX_RETRIES = 3;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -136,6 +144,7 @@ async function extractBatch(dataUris: string[], imageOffset: number): Promise<Ex
         response_format: { type: "json_object" },
         temperature: 0.1,
         max_completion_tokens: MAX_COMPLETION_TOKENS,
+        reasoning_effort: "none",
       }),
     });
 
