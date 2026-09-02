@@ -18,11 +18,11 @@ function gradeTone(grade: string): GradeTone {
 }
 
 const TONE_TEXT: Record<GradeTone, string> = {
-  great: "text-emerald-600 dark:text-emerald-400",
-  good: "text-lime-600 dark:text-lime-400",
-  mid: "text-amber-600 dark:text-amber-400",
-  weak: "text-orange-600 dark:text-orange-400",
-  bad: "text-red-600 dark:text-red-400",
+  great: "text-emerald-400",
+  good: "text-lime-400",
+  mid: "text-amber-400",
+  weak: "text-orange-400",
+  bad: "text-red-400",
 };
 
 const TONE_RING: Record<GradeTone, string> = {
@@ -34,11 +34,11 @@ const TONE_RING: Record<GradeTone, string> = {
 };
 
 const TONE_BG: Record<GradeTone, string> = {
-  great: "bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900",
-  good: "bg-lime-50 border-lime-200 dark:bg-lime-950/30 dark:border-lime-900",
-  mid: "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900",
-  weak: "bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900",
-  bad: "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-900",
+  great: "bg-emerald-950/30 border-emerald-900",
+  good: "bg-lime-950/30 border-lime-900",
+  mid: "bg-amber-950/30 border-amber-900",
+  weak: "bg-orange-950/30 border-orange-900",
+  bad: "bg-red-950/30 border-red-900",
 };
 
 const TONE_BAR: Record<GradeTone, string> = {
@@ -89,7 +89,7 @@ function PlayerRow({ player }: { player: GradedPlayer }) {
             {player.sleeperId ? (player.matchedName ?? player.rawName) : player.rawName}
           </span>
           {!player.sleeperId && (
-            <span className="shrink-0 text-xs text-amber-600 dark:text-amber-400" title="Couldn't confidently match this player">
+            <span className="shrink-0 text-xs text-amber-400" title="Couldn't confidently match this player">
               ⚠
             </span>
           )}
@@ -134,15 +134,15 @@ export default function ReportStep({ report, onReset }: Props) {
       {(report.strengths.length > 0 || report.weaknesses.length > 0) && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {report.strengths.length > 0 && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm dark:border-emerald-900 dark:bg-emerald-950/30">
-              <div className="font-medium text-emerald-700 dark:text-emerald-400">Strengths</div>
-              <div className="mt-1 text-emerald-800 dark:text-emerald-300">{report.strengths.join(", ")}</div>
+            <div className="rounded-lg border border-emerald-900 bg-emerald-950/30 p-4 text-sm">
+              <div className="font-medium text-emerald-400">Strengths</div>
+              <div className="mt-1 text-emerald-300">{report.strengths.join(", ")}</div>
             </div>
           )}
           {report.weaknesses.length > 0 && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm dark:border-red-900 dark:bg-red-950/30">
-              <div className="font-medium text-red-700 dark:text-red-400">Needs attention</div>
-              <div className="mt-1 text-red-800 dark:text-red-300">{report.weaknesses.join(", ")}</div>
+            <div className="rounded-lg border border-red-900 bg-red-950/30 p-4 text-sm">
+              <div className="font-medium text-red-400">Needs attention</div>
+              <div className="mt-1 text-red-300">{report.weaknesses.join(", ")}</div>
             </div>
           )}
         </div>
@@ -175,12 +175,12 @@ export default function ReportStep({ report, onReset }: Props) {
       </div>
 
       {report.unmatchedPlayers.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">
-          <div className="font-medium text-amber-700 dark:text-amber-400">
+        <div className="rounded-lg border border-amber-900 bg-amber-950/30 p-4 text-sm">
+          <div className="font-medium text-amber-400">
             Couldn&apos;t confidently match {report.unmatchedPlayers.length} player
             {report.unmatchedPlayers.length === 1 ? "" : "s"}
           </div>
-          <div className="mt-1 text-amber-800 dark:text-amber-300">
+          <div className="mt-1 text-amber-300">
             {report.unmatchedPlayers.map((p) => p.rawName).join(", ")} — excluded from grading. Double-check the
             spelling on the review step and try again.
           </div>

@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
+/* Fixed black/white theme — deliberate, not adaptive to system light/dark. */
 :root {
-  --background: #f7f7f5;
-  --foreground: #18181b;
-  --surface: #ffffff;
-  --surface-muted: #f4f4f5;
-  --border: #e4e4e7;
-  --muted-foreground: #71717a;
-  --accent: #ea580c;
-  --accent-hover: #c2410c;
-  --accent-foreground: #ffffff;
-  --accent-soft: #fff1e8;
-  --accent-soft-foreground: #9a3412;
+  --background: #000000;
+  --foreground: #ffffff;
+  --surface: #111113;
+  --surface-muted: #1c1c1f;
+  --border: #2c2c30;
+  --muted-foreground: #a1a1aa;
+  --accent: #ffffff;
+  --accent-hover: #d4d4d8;
+  --accent-foreground: #000000;
+  --accent-soft: #242427;
+  --accent-soft-foreground: #f4f4f5;
 }
 
 @theme inline {
@@ -30,20 +31,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0b0b0c;
-    --foreground: #f4f4f5;
-    --surface: #17171a;
-    --surface-muted: #1e1e22;
-    --border: #2b2b30;
-    --muted-foreground: #9a9aa2;
-    --accent: #fb923c;
-    --accent-hover: #fdba74;
-    --accent-foreground: #1a0f00;
-    --accent-soft: #2a1a0c;
-    --accent-soft-foreground: #fdba74;
-  }
+/* This app intentionally ignores prefers-color-scheme — it's black/white
+   always, by request, not a light-mode-with-a-dark-variant design. */
+:root {
+  color-scheme: dark;
 }
 
 body {
