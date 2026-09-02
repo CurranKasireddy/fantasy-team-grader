@@ -70,8 +70,11 @@ export default function ReportStep({ report, onReset }: Props) {
                     <td className="px-4 py-1.5 text-right text-zinc-500">
                       {p.pointsPerGame !== null ? `${p.pointsPerGame.toFixed(1)} pt/gm` : "no data"}
                     </td>
-                    <td className="w-16 px-4 py-1.5 text-right text-zinc-400">
+                    <td className="w-14 px-4 py-1.5 text-right text-zinc-400">
                       {p.positionPercentile !== null ? `${p.positionPercentile}th pctl` : "—"}
+                    </td>
+                    <td className="w-10 px-4 py-1.5 text-right">
+                      {p.grade && <span className={`font-semibold ${gradeColor(p.grade)}`}>{p.grade}</span>}
                     </td>
                   </tr>
                 ))}

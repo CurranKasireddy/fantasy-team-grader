@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllPlayers, getBestAvailableSeasonStats, matchPlayer } from "@/lib/sleeper";
-import { buildTeamReport, percentileRank } from "@/lib/grading";
+import { buildTeamReport, letterGrade, percentileRank } from "@/lib/grading";
 import type { ExtractedPlayer, GradedPlayer, LeagueSettings } from "@/lib/types";
 
 function isValidSettings(s: unknown): s is LeagueSettings {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
         gamesPlayed: stat?.gamesPlayed ?? null,
         pointsPerGame,
         positionPercentile,
-        grade: null, // set at the position-group level, not per player
+        grade: positionPercentile !== null ? letterGrade(positionPercentile) : null,
       };
     });
 
