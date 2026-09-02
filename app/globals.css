@@ -1,7 +1,27 @@
 @import "tailwindcss";
 
-/* Fixed black/white theme — deliberate, not adaptive to system light/dark. */
-:root {
+/* Drive Tailwind's dark: variant off an explicit data-theme attribute
+   (toggled by ThemeToggle, applied pre-paint by the inline script in
+   layout.tsx) instead of the OS prefers-color-scheme media query — this is
+   a user-controlled toggle, not an OS-follows-automatically theme. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --surface: #ffffff;
+  --surface-muted: #f4f4f5;
+  --border: #e4e4e7;
+  --muted-foreground: #71717a;
+  --accent: #0a0a0a;
+  --accent-hover: #27272a;
+  --accent-foreground: #ffffff;
+  --accent-soft: #f4f4f5;
+  --accent-soft-foreground: #18181b;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
   --background: #000000;
   --foreground: #ffffff;
   --surface: #111113;
@@ -13,6 +33,7 @@
   --accent-foreground: #000000;
   --accent-soft: #242427;
   --accent-soft-foreground: #f4f4f5;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -29,12 +50,6 @@
   --color-accent-soft-foreground: var(--accent-soft-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-/* This app intentionally ignores prefers-color-scheme — it's black/white
-   always, by request, not a light-mode-with-a-dark-variant design. */
-:root {
-  color-scheme: dark;
 }
 
 body {
