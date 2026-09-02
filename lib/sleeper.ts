@@ -1,7 +1,8 @@
 // Sleeper API access: player identity DB + season stats, both public/no-auth.
 // The full player list is ~15MB and Sleeper's own docs ask that it be fetched
-// at most once a day, so we cache both endpoints to disk under .cache/.
+// at most once a day, so we cache both endpoints to disk.
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import type { ScoringFormat, SleeperPlayerRecord } from "./types";
 
@@ -10,7 +11,13 @@ const PLAYERS_URL = "https://api.sleeper.app/v1/players/nfl";
 // not .app) — undocumented, but verified live against the real API.
 const STATS_URL = (season: string) => `https://api.sleeper.com/stats/nfl/${season}?season_type=regular`;
 
-const CACHE_DIR = path.join(process.cwd(), ".cache");
+// os.tmpdir() rather than a project-relative folder: serverless hosts like
+// Vercel have a read-only filesystem except /tmp (which os.tmpdir()
+// resolves to there), and it's just as valid a cache location locally.
+// /tmp is ephemeral — wiped between cold starts — so this is a
+// best-effort speedup, not a durable cache; every read/write below treats
+// a miss or failure as normal, not an error.
+const CACHE_DIR = path.join(os.tmpdir(), "fantasy-team-grader-cache");
 const PLAYERS_CACHE_FILE = path.join(CACHE_DIR, "sleeper-players.json");
 const PLAYERS_TTL_MS = 24 * 60 * 60 * 1000; // 24h, per Sleeper's own guidance
 const STATS_TTL_MS = 6 * 60 * 60 * 1000; // 6h — in-season totals shift during the week
@@ -48,9 +55,15 @@ async function readCache<T>(file: string, maxAgeMs: number): Promise<T | null> {
 }
 
 async function writeCache<T>(file: string, data: T): Promise<void> {
-  await fs.mkdir(CACHE_DIR, { recursive: true });
-  const envelope: CacheEnvelope<T> = { fetchedAt: Date.now(), data };
-  await fs.writeFile(file, JSON.stringify(envelope), "utf-8");
+  // Best-effort: a cache write failing (read-only FS, out of space, a
+  // wiped /tmp mid-request) should never break the actual request.
+  try {
+    await fs.mkdir(CACHE_DIR, { recursive: true });
+    const envelope: CacheEnvelope<T> = { fetchedAt: Date.now(), data };
+    await fs.writeFile(file, JSON.stringify(envelope), "utf-8");
+  } catch {
+    // ignore — next call just re-fetches from Sleeper
+  }
 }
 
 // --- Player identity DB -----------------------------------------------

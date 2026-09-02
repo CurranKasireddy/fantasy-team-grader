@@ -49,13 +49,33 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Deploying (optional — for a public, shareable link)
+
+This is a standard Next.js app, so [Vercel](https://vercel.com)'s free tier
+is the easiest fit (built by the Next.js team, zero-config):
+
+1. Push this repo to GitHub.
+2. Import it on Vercel (sign in with GitHub, "New Project" → pick the repo).
+3. Add `GROQ_API_KEY` as an environment variable in the Vercel project
+   settings (same value as your local `.env.local`) — it deploys automatically
+   after that.
+
+**Worth knowing before making it public:** every visitor's screenshot
+extraction uses *your* Groq API key, so they all share your account's free-
+tier rate limit (30 requests/min, 1,000/day as of writing) — fine for
+sharing with friends or a portfolio link, but something to watch if it gets
+wide traffic. There's no login system, so anyone with the link can use it;
+nothing is stored server-side between requests.
+
 ## Notes / known limitations (MVP)
 
 - **Cost:** effectively free. Groq's free tier (no credit card) covers this
   app's usage many times over for personal use.
-- **Sleeper's player list** (~15MB) and season stats are cached to disk
-  under `.cache/` (gitignored) since Sleeper asks that the full player list
-  not be fetched more than once a day.
+- **Sleeper's player list** (~15MB) and season stats are cached to the OS
+  temp directory (via `os.tmpdir()`) since Sleeper asks that the full player
+  list not be fetched more than once a day. This is a best-effort speedup,
+  not a durable cache — serverless hosts wipe it between cold starts, and a
+  cache write failing never breaks a request.
 - **Season used for grading:** the current NFL season if it has meaningful
   data yet, otherwise the most recently completed one (see
   `getBestAvailableSeasonStats` in `lib/sleeper.ts`).

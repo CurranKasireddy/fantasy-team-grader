@@ -36,9 +36,6 @@ yarn-error.log*
 # vercel
 .vercel
 
-# disk cache for Sleeper API responses (see lib/sleeper.ts)
-/.cache
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
