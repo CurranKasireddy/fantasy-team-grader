@@ -37,21 +37,21 @@ export default function UploadStep({ settings, onSettingsChange, onSubmit, loadi
   }
 
   return (
-    <div className="flex flex-col gap-8 w-full max-w-2xl">
+    <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Fantasy Team Grader</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <h1 className="text-2xl font-semibold tracking-tight">Grade your team</h1>
+        <p className="mt-1.5 text-sm text-muted-foreground">
           Upload screenshots of your roster and get a stats-based grade on team strength.
         </p>
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">League settings</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">League settings</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Scoring
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium">Scoring</span>
             <select
-              className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+              className="rounded-md border border-border bg-surface px-2.5 py-1.5 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               value={settings.scoring}
               onChange={(e) => onSettingsChange({ ...settings, scoring: e.target.value as ScoringFormat })}
             >
@@ -60,20 +60,21 @@ export default function UploadStep({ settings, onSettingsChange, onSubmit, loadi
               <option value="ppr">Full PPR</option>
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-sm">
-            # of teams
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="font-medium"># of teams</span>
             <input
               type="number"
               min={4}
               max={20}
-              className="rounded border border-zinc-300 bg-transparent px-2 py-1.5 dark:border-zinc-700"
+              className="rounded-md border border-border bg-surface px-2.5 py-1.5 outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
               value={settings.numTeams}
               onChange={(e) => onSettingsChange({ ...settings, numTeams: Number(e.target.value) || 12 })}
             />
           </label>
-          <label className="flex items-center gap-2 self-end pb-1.5 text-sm">
+          <label className="flex items-center gap-2 self-end pb-2 text-sm font-medium">
             <input
               type="checkbox"
+              className="h-4 w-4 accent-accent"
               checked={settings.superflex}
               onChange={(e) => onSettingsChange({ ...settings, superflex: e.target.checked })}
             />
@@ -83,10 +84,13 @@ export default function UploadStep({ settings, onSettingsChange, onSubmit, loadi
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Roster screenshots</h2>
-        <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-300 px-6 py-10 text-center text-sm text-zinc-500 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-400">
-          <span>Click to choose image(s), or drag them here</span>
-          <span className="mt-1 text-xs text-zinc-400">Any fantasy app — Sleeper, ESPN, Yahoo, etc.</span>
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Roster screenshots</h2>
+        <label className="group flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border px-6 py-10 text-center transition-colors hover:border-accent hover:bg-accent-soft">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-muted text-lg group-hover:bg-accent-soft">
+            📸
+          </span>
+          <span className="text-sm font-medium">Click to choose image(s), or drag them here</span>
+          <span className="text-xs text-muted-foreground">Any fantasy app — Sleeper, ESPN, Yahoo, etc.</span>
           <input
             type="file"
             accept="image/*"
@@ -99,13 +103,13 @@ export default function UploadStep({ settings, onSettingsChange, onSubmit, loadi
         {previews.length > 0 && (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
             {previews.map((src, i) => (
-              <div key={i} className="relative">
+              <div key={i} className="group relative overflow-hidden rounded-lg border border-border">
                 {/* eslint-disable-next-line @next/next/no-img-element -- local blob preview, next/image doesn't apply */}
-                <img src={src} alt={`Screenshot ${i + 1}`} className="aspect-[9/16] w-full rounded object-cover" />
+                <img src={src} alt={`Screenshot ${i + 1}`} className="aspect-[9/16] w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
                   aria-label={`Remove screenshot ${i + 1}`}
                 >
                   ×
@@ -116,13 +120,17 @@ export default function UploadStep({ settings, onSettingsChange, onSubmit, loadi
         )}
       </section>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+          {error}
+        </p>
+      )}
 
       <button
         type="button"
         disabled={files.length === 0 || loading}
         onClick={handleSubmit}
-        className="self-start rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+        className="self-start rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
       >
         {loading ? "Reading roster…" : `Analyze ${files.length || ""} screenshot${files.length === 1 ? "" : "s"}`}
       </button>

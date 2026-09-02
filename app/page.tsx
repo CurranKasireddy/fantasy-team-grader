@@ -4,6 +4,7 @@ import { useState } from "react";
 import UploadStep from "@/components/UploadStep";
 import ReviewStep from "@/components/ReviewStep";
 import ReportStep from "@/components/ReportStep";
+import StepIndicator from "@/components/StepIndicator";
 import { DEFAULT_LEAGUE_SETTINGS } from "@/lib/types";
 import type { ExtractedPlayer, LeagueSettings, TeamReport } from "@/lib/types";
 
@@ -65,27 +66,35 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 py-12 dark:bg-black">
-      {step === "upload" && (
-        <UploadStep
-          settings={settings}
-          onSettingsChange={setSettings}
-          onSubmit={handleExtract}
-          loading={loading}
-          error={error}
-        />
-      )}
-      {step === "review" && (
-        <ReviewStep
-          players={players}
-          onPlayersChange={setPlayers}
-          onSubmit={handleGrade}
-          onBack={() => setStep("upload")}
-          loading={loading}
-          error={error}
-        />
-      )}
-      {step === "report" && report && <ReportStep report={report} onReset={handleReset} />}
+    <div className="flex flex-1 flex-col items-center px-6 py-10">
+      <div className="w-full max-w-3xl">
+        <div className="mb-6">
+          <StepIndicator current={step} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+          {step === "upload" && (
+            <UploadStep
+              settings={settings}
+              onSettingsChange={setSettings}
+              onSubmit={handleExtract}
+              loading={loading}
+              error={error}
+            />
+          )}
+          {step === "review" && (
+            <ReviewStep
+              players={players}
+              onPlayersChange={setPlayers}
+              onSubmit={handleGrade}
+              onBack={() => setStep("upload")}
+              loading={loading}
+              error={error}
+            />
+          )}
+          {step === "report" && report && <ReportStep report={report} onReset={handleReset} />}
+        </div>
+      </div>
     </div>
   );
 }

@@ -37,31 +37,33 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
   }
 
   return (
-    <div className="flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Confirm your roster</h1>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          Fix any misread names or positions before grading — this is the model&apos;s best guess from your screenshots.
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Fix any misread names or positions before grading — this is the model&apos;s best guess from your
+          screenshots. Found <span className="font-medium text-foreground">{players.length}</span> player
+          {players.length === 1 ? "" : "s"}.
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full min-w-[560px] text-sm">
-          <thead className="bg-zinc-50 text-left text-xs uppercase tracking-wide text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400">
+          <thead className="bg-surface-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
-              <th className="px-3 py-2">Name</th>
-              <th className="px-3 py-2">Pos</th>
-              <th className="px-3 py-2">Team</th>
-              <th className="px-3 py-2">Starter</th>
+              <th className="px-3 py-2 font-medium">Name</th>
+              <th className="px-3 py-2 font-medium">Pos</th>
+              <th className="px-3 py-2 font-medium">Team</th>
+              <th className="px-3 py-2 font-medium">Starter</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
             {players.map((p) => (
-              <tr key={p.clientId} className="border-t border-zinc-200 dark:border-zinc-800">
+              <tr key={p.clientId} className="border-t border-border hover:bg-surface-muted/60">
                 <td className="px-3 py-1.5">
                   <input
-                    className="w-full rounded border border-transparent bg-transparent px-1.5 py-1 hover:border-zinc-300 focus:border-zinc-400 dark:hover:border-zinc-700"
+                    className="w-full rounded-md border border-transparent bg-transparent px-2 py-1 hover:border-border focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                     value={p.rawName}
                     onChange={(e) => update(p.clientId, { rawName: e.target.value })}
                     placeholder="Player name"
@@ -69,7 +71,7 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
                 </td>
                 <td className="px-3 py-1.5">
                   <select
-                    className="rounded border border-zinc-300 bg-transparent px-1.5 py-1 dark:border-zinc-700"
+                    className="rounded-md border border-border bg-surface px-2 py-1 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                     value={POSITIONS.includes(p.position) ? p.position : "RB"}
                     onChange={(e) => update(p.clientId, { position: e.target.value })}
                   >
@@ -82,7 +84,7 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
                 </td>
                 <td className="px-3 py-1.5">
                   <input
-                    className="w-16 rounded border border-transparent bg-transparent px-1.5 py-1 uppercase hover:border-zinc-300 focus:border-zinc-400 dark:hover:border-zinc-700"
+                    className="w-16 rounded-md border border-transparent bg-transparent px-2 py-1 uppercase hover:border-border focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
                     value={p.nflTeam ?? ""}
                     onChange={(e) => update(p.clientId, { nflTeam: e.target.value || null })}
                     placeholder="—"
@@ -91,6 +93,7 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
                 <td className="px-3 py-1.5 text-center">
                   <input
                     type="checkbox"
+                    className="h-4 w-4 accent-accent"
                     checked={p.isStarter}
                     onChange={(e) => update(p.clientId, { isStarter: e.target.checked })}
                   />
@@ -99,28 +102,43 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
                   <button
                     type="button"
                     onClick={() => remove(p.clientId)}
-                    className="text-xs text-zinc-400 hover:text-red-500"
+                    className="text-xs text-muted-foreground hover:text-red-500"
                   >
                     remove
                   </button>
                 </td>
               </tr>
             ))}
+            {players.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No players yet — add one manually below.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      <button type="button" onClick={addPlayer} className="self-start text-sm text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200">
+      <button
+        type="button"
+        onClick={addPlayer}
+        className="self-start text-sm font-medium text-accent hover:text-accent-hover"
+      >
         + add a player manually
       </button>
 
-      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-400">
+          {error}
+        </p>
+      )}
 
       <div className="flex gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium dark:border-zinc-700"
+          className="rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-surface-muted"
         >
           Back
         </button>
@@ -128,7 +146,7 @@ export default function ReviewStep({ players, onPlayersChange, onSubmit, onBack,
           type="button"
           disabled={players.length === 0 || loading}
           onClick={onSubmit}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40 dark:bg-zinc-100 dark:text-zinc-900"
+          className="rounded-md bg-accent px-5 py-2 text-sm font-semibold text-accent-foreground transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? "Grading…" : "Grade my team"}
         </button>
