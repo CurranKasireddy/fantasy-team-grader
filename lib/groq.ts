@@ -1,13 +1,32 @@
 // Vision extraction: turn roster screenshots into a structured player list
-// using Groq's free-tier API (qwen/qwen3.6-27b, vision-capable, up to 5
-// images per request). See README for how to get a free Groq API key.
+// using Groq's free-tier API (qwen/qwen3.6-27b, vision-capable). See README
+// for how to get a free Groq API key.
 import type { ExtractedPlayer } from "./types";
 
 const GROQ_MODEL = "qwen/qwen3.6-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-// Verified against Groq's vision docs: this model accepts at most 5 images
-// per request, so we batch larger uploads into multiple calls.
-const MAX_IMAGES_PER_CALL = 5;
+// Groq's vision docs allow up to 5 images per request, but the free tier
+// caps this model at 8,000 tokens/minute and each image alone costs ~2,048
+// tokens — 5 images would blow past that before counting the prompt or
+// output. 2 per call leaves comfortable headroom.
+const MAX_IMAGES_PER_CALL = 2;
+const MAX_COMPLETION_TOKENS = 2048;
+const MAX_RETRIES = 3;
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Parses either a plain-seconds string ("22.3") or a Go-style duration
+ * string ("2m59.56s", "7.66s") as used by Groq's rate-limit headers. */
+function parseDelaySeconds(value: string | null): number | null {
+  if (!value) return null;
+  const plain = Number(value);
+  if (!Number.isNaN(plain)) return plain;
+  const match = value.match(/^(?:(\d+)m)?(?:([\d.]+)s)?$/);
+  if (match && (match[1] || match[2])) {
+    return (match[1] ? Number(match[1]) * 60 : 0) + (match[2] ? Number(match[2]) : 0);
+  }
+  return null;
+}
 
 const SYSTEM_PROMPT = `You read screenshots of fantasy football team rosters (from apps like Sleeper, ESPN Fantasy, Yahoo Fantasy, or similar) and extract every player visible into structured JSON.
 
@@ -17,7 +36,7 @@ Rules:
 - "position" must be one of: QB, RB, WR, TE, K, DEF (use DEF for team defense/special teams, e.g. "49ers D/ST" -> nflTeam "SF", rawName "SF").
 - "nflTeam" is the player's NFL team as a 2-3 letter abbreviation if visible (e.g. "KC", "SF", "DAL"), or null if not shown.
 - "sourceImageIndex" is the 0-based index of which image (in the order given) the player was read from.
-- Do not invent players that are not visibly present. Do not deduplicate across images — if the same player appears in two images, list them twice; the caller will deduplicate.
+- Do not invent players that are not visibly present. Within a single image, a real roster screenshot lists each player row exactly once — if you think you see the same name twice in the same image, look again, that is almost always a misread, not a genuine repeat, so only list it once. (Across two *separate* uploaded images, the same player legitimately can appear twice — e.g. cropped/overlapping screenshots — and both should be listed, one per image.)
 - Reply with ONLY a JSON object of the exact shape: {"players": [{"rawName": string, "position": string, "nflTeam": string|null, "isStarter": boolean, "sourceImageIndex": number}]}`;
 
 interface RawExtractedPlayer {
@@ -50,6 +69,23 @@ function coercePlayer(raw: RawExtractedPlayer, imageOffset: number): ExtractedPl
   };
 }
 
+// Safety net for vision hallucination (observed in testing: the model can
+// mistakenly "see" a repeated block of rows within one image and duplicate
+// every player). A real screenshot never legitimately lists the same
+// name+position twice within a single image, so collapse those rather than
+// relying on prompt wording alone.
+function dedupeWithinEachImage(players: ExtractedPlayer[]): ExtractedPlayer[] {
+  const seen = new Set<string>();
+  const result: ExtractedPlayer[] = [];
+  for (const p of players) {
+    const key = `${p.sourceImage}|${p.rawName.trim().toLowerCase()}|${p.position}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(p);
+  }
+  return result;
+}
+
 function parseRosterJson(text: string, imageOffset: number): ExtractedPlayer[] {
   const cleaned = stripCodeFence(text);
   let obj: unknown;
@@ -62,9 +98,10 @@ function parseRosterJson(text: string, imageOffset: number): ExtractedPlayer[] {
     obj && typeof obj === "object" && "players" in obj && Array.isArray((obj as { players: unknown }).players)
       ? ((obj as { players: RawExtractedPlayer[] }).players)
       : [];
-  return players
+  const coerced = players
     .map((p) => coercePlayer(p, imageOffset))
     .filter((p): p is ExtractedPlayer => p !== null);
+  return dedupeWithinEachImage(coerced);
 }
 
 async function extractBatch(dataUris: string[], imageOffset: number): Promise<ExtractedPlayer[]> {
@@ -80,35 +117,61 @@ async function extractBatch(dataUris: string[], imageOffset: number): Promise<Ex
     ...dataUris.map((url) => ({ type: "image_url", image_url: { url } })),
   ];
 
-  const res = await fetch(GROQ_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: GROQ_MODEL,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.1,
-      max_completion_tokens: 4096,
-    }),
-  });
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(GROQ_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+        max_completion_tokens: MAX_COMPLETION_TOKENS,
+      }),
+    });
 
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "");
-    throw new Error(`Groq API error ${res.status}: ${errText.slice(0, 500)}`);
+    if (res.status === 429) {
+      const waitSeconds =
+        parseDelaySeconds(res.headers.get("retry-after")) ??
+        parseDelaySeconds(res.headers.get("x-ratelimit-reset-tokens")) ??
+        5 * (attempt + 1);
+      if (attempt < MAX_RETRIES) {
+        await sleep(waitSeconds * 1000 + 250);
+        continue;
+      }
+      throw new Error(
+        `Groq's free-tier rate limit is exhausted for now. Wait ~${Math.ceil(waitSeconds)}s and try again with fewer screenshots at once.`
+      );
+    }
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      // Per Groq's own guidance, this is an occasional/transient failure —
+      // worth a quick retry before giving up.
+      const isTransientJsonFailure = errText.includes("json_validate_failed");
+      if (isTransientJsonFailure && attempt < MAX_RETRIES) {
+        await sleep(500 * (attempt + 1));
+        continue;
+      }
+      throw new Error(`Groq API error ${res.status}: ${errText.slice(0, 500)}`);
+    }
+
+    const data = await res.json();
+    const raw = data?.choices?.[0]?.message?.content;
+    if (typeof raw !== "string" || !raw.trim()) {
+      throw new Error("Groq returned an empty response for roster extraction.");
+    }
+    return parseRosterJson(raw, imageOffset);
   }
 
-  const data = await res.json();
-  const raw = data?.choices?.[0]?.message?.content;
-  if (typeof raw !== "string" || !raw.trim()) {
-    throw new Error("Groq returned an empty response for roster extraction.");
-  }
-  return parseRosterJson(raw, imageOffset);
+  // Unreachable: the loop above always returns or throws.
+  throw new Error("Groq roster extraction failed after retries.");
 }
 
 /**
