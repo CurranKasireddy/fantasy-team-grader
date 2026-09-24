@@ -18,7 +18,7 @@ next step.
 1. You upload one or more roster screenshots and pick your league's scoring
    format.
 2. [Groq's free API](https://console.groq.com) runs a vision model
-   (`qwen/qwen3.6-27b`) that reads each screenshot and extracts player
+   (`qwen/qwen3.8-27b`) that reads each screenshot and extracts player
    name / position / team / starter-or-bench.
 3. You review and fix the extracted roster (vision reads aren't perfect —
    this step catches misreads before they affect your grade).

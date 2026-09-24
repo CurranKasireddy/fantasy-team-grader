@@ -1,10 +1,11 @@
 // Vision extraction: turn roster screenshots into a structured player list
-// using Groq's free-tier API (qwen/qwen3.6-27b, vision-capable). See README
-// for how to get a free Groq API key.
+// using Groq's free-tier API (qwen/qwen3.8-27b, vision-capable — the
+// successor to qwen3.6-27b, which Groq deprecated/removed entirely). See
+// README for how to get a free Groq API key.
 import { parseDelaySeconds, sleep } from "./groq-shared";
 import type { ExtractedPlayer } from "./types";
 
-const GROQ_MODEL = "qwen/qwen3.6-27b";
+const GROQ_MODEL = "qwen/qwen3.8-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // This model spends part of its output budget on hidden chain-of-thought
 // reasoning before the actual JSON — confirmed live twice: once via

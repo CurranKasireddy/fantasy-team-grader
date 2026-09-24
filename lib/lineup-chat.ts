@@ -5,7 +5,7 @@
 import { parseDelaySeconds, sleep } from "./groq-shared";
 import type { ChatMessage, GradedPlayer } from "./types";
 
-const GROQ_MODEL = "qwen/qwen3.6-27b";
+const GROQ_MODEL = "qwen/qwen3.8-27b";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 // reasoning_effort: "none" — tried leaving reasoning on first and hit the
 // same failure class as the vision extraction fix, in a worse form: with no
