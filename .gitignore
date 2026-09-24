@@ -36,6 +36,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Sleeper API cache — the app itself writes to os.tmpdir(), never here, but
+# this stays as a safety net against ever re-committing it by accident again
+/.cache
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
