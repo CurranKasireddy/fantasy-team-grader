@@ -1,14 +1,17 @@
 # Fantasy Team Grader
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CurranKasireddy/fantasy-team-grader&env=GROQ_API_KEY&envDescription=Free%20API%20key%20from%20console.groq.com%2Fkeys)
+
 Upload screenshots of your fantasy football roster (from any app — Sleeper,
-ESPN, Yahoo, whatever) and get a stats-based grade on your team: an overall
-grade plus a breakdown per position, backed by real season fantasy-points
+ESPN, Yahoo, whatever) and get a stats-based grade on your team, a
+per-player breakdown with injury status / this week's matchup / projected
+points, and a chatbot to ask start/sit questions grounded in that same real
 data.
 
-This is an MVP for personal, local use — no accounts, no database, nothing
-persisted between sessions. Start/sit and add/drop recommendations (matchup-
-and momentum-aware) are a planned Phase 2, built on top of this same
-extraction + grading pipeline.
+This is an MVP for personal/friends use — no accounts, no database, nothing
+persisted between sessions. Add/drop recommendations from a free-agent
+screenshot (reusing this same extraction + grading pipeline) are a planned
+next step.
 
 ## How it works
 
@@ -20,9 +23,12 @@ extraction + grading pipeline.
 3. You review and fix the extracted roster (vision reads aren't perfect —
    this step catches misreads before they affect your grade).
 4. Each player is matched to [Sleeper's](https://sleeper.com) public player
-   database and joined with real season fantasy-points data.
+   database and joined with real season fantasy-points data, this week's
+   matchup/projection, and injury status.
 5. Each player is graded by percentile against every other real player at
-   their position; positions roll up into an overall team grade.
+   their position; positions roll up into an overall team grade. Click any
+   player for their full detail (health, next matchup, projection), or ask
+   the built-in chatbot a start/sit question about your actual roster.
 
 ## Setup
 
@@ -51,14 +57,11 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Deploying (optional — for a public, shareable link)
 
-This is a standard Next.js app, so [Vercel](https://vercel.com)'s free tier
-is the easiest fit (built by the Next.js team, zero-config):
-
-1. Push this repo to GitHub.
-2. Import it on Vercel (sign in with GitHub, "New Project" → pick the repo).
-3. Add `GROQ_API_KEY` as an environment variable in the Vercel project
-   settings (same value as your local `.env.local`) — it deploys automatically
-   after that.
+Click the "Deploy with Vercel" button at the top of this README — it clones
+this repo into a new Vercel project and prompts for the one environment
+variable it needs (`GROQ_API_KEY`, same free key from
+[console.groq.com/keys](https://console.groq.com/keys)). Sign in with GitHub
+if you haven't already; no separate account/password needed.
 
 **Worth knowing before making it public:** every visitor's screenshot
 extraction uses *your* Groq API key, so they all share your account's free-
@@ -91,15 +94,22 @@ nothing is stored server-side between requests.
 ```
 app/
   page.tsx                 wizard: upload -> review -> report
+  layout.tsx                theme (light/dark) anti-flash script + header
   api/extract-roster/      POST: screenshots -> extracted roster (Groq)
-  api/grade-team/          POST: roster + settings -> TeamReport
+  api/grade-team/          POST: roster + settings -> TeamReport (+ matchup/injury)
+  api/lineup-chat/         POST: chat history + roster -> assistant reply (Groq)
 components/
   UploadStep.tsx           screenshot upload + league settings
   ReviewStep.tsx           editable roster table
   ReportStep.tsx           grade + per-position breakdown
+  PlayerDetailModal.tsx    click a player: health, next matchup, projection
+  LineupChat.tsx           "ask about your lineup" start/sit chatbot
+  Header.tsx / ThemeToggle.tsx / StepIndicator.tsx
 lib/
   groq.ts                  vision extraction (Groq API)
-  sleeper.ts                player identity DB, season stats, name matching
+  lineup-chat.ts           start/sit chat (Groq, text-only)
+  groq-shared.ts           rate-limit backoff shared by both Groq callers
+  sleeper.ts                player identity DB, season/weekly stats, name matching
   grading.ts                percentile scoring, letter grades
   types.ts                  shared types
 ```
